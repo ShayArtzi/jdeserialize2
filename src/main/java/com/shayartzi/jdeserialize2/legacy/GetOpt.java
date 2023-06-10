@@ -17,10 +17,13 @@ public class GetOpt {
     private Map<String, List<String>> optvals;
 
     public class OptionParseException extends Exception {
+    	
         public static final long serialVersionUID = 2898924890585885551L;
+        
         public OptionParseException(String message) {
             super(message);
         }
+        
     }
 
     /**
@@ -148,34 +151,6 @@ public class GetOpt {
             }
         }
         return sb.toString();
-    }
-
-    public static void main(String[] args) {
-        try {
-            HashMap<String, Integer> options = new HashMap<String, Integer>();
-            GetOpt go = new GetOpt();
-            go.addOption("-optzero", 0, "zero-arg constructor");
-            go.addOption("-optone", 1, "one-arg constructor");
-            go.addOption("-opttwo", 2, "two-arg constructor");
-            go.parse(args);
-            System.out.println(go.getDescriptionString());
-            System.out.println("options:");
-            Map<String, List<String>> optvals = go.getOptionValues();
-            for(String opt: optvals.keySet()) {
-                System.out.print("    " + opt);
-                for(String optval: optvals.get(opt)) {
-                    System.out.print(" " + optval);
-                }
-                System.out.println("");
-            }
-            System.out.println("");
-            System.out.println("otherargs:");
-            for(String arg: go.getOtherArguments()) {
-                System.out.println("    " + arg);
-            }
-        } catch (Throwable t) {
-            t.printStackTrace();
-        }
-    }
+    }   
     
 }
