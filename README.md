@@ -1,4 +1,5 @@
 # jdeserialize2
+![build status](https://github.com/ShayArtzi/jdeserialize2/actions/workflows/build.yml/badge.svg)
 
 This is an attempt to modernize and maintain the [jdeserialize](https://github.com/unsynchronized/jdeserialize) project.
 
