@@ -7,21 +7,19 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectStreamConstants;
-import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.shayartzi.jdeserialize2.legacy.ExceptionReadException;
-import com.shayartzi.jdeserialize2.legacy.GetOpt;
-import com.shayartzi.jdeserialize2.legacy.LoggerInputStream;
-import com.shayartzi.jdeserialize2.legacy.ValidityException;
 import com.shayartzi.jdeserialize2.legacy.ArrayColl;
 import com.shayartzi.jdeserialize2.legacy.ArrayObj;
 import com.shayartzi.jdeserialize2.legacy.BlockData;
@@ -30,11 +28,15 @@ import com.shayartzi.jdeserialize2.legacy.ClassDescTypeEnum;
 import com.shayartzi.jdeserialize2.legacy.ClassObj;
 import com.shayartzi.jdeserialize2.legacy.Content;
 import com.shayartzi.jdeserialize2.legacy.EnumObj;
+import com.shayartzi.jdeserialize2.legacy.ExceptionReadException;
 import com.shayartzi.jdeserialize2.legacy.ExceptionState;
 import com.shayartzi.jdeserialize2.legacy.Field;
 import com.shayartzi.jdeserialize2.legacy.FieldTypeEnum;
+import com.shayartzi.jdeserialize2.legacy.GetOpt;
 import com.shayartzi.jdeserialize2.legacy.Instance;
+import com.shayartzi.jdeserialize2.legacy.LoggerInputStream;
 import com.shayartzi.jdeserialize2.legacy.StringObj;
+import com.shayartzi.jdeserialize2.legacy.ValidityException;
 import com.shayartzi.jdeserialize2.util.FormatUtil;
 import com.shayartzi.jdeserialize2.util.LogUtil;
 import com.shayartzi.jdeserialize2.util.TypeUtil;
@@ -100,10 +102,12 @@ public class Jdeserialize2 {
     public static final int CODEWIDTH = 90;
 
     private String filename;
-    private HashMap<Integer,Content> handles = new HashMap<Integer,Content>();
+    private HashMap<Integer,Content> handles = new LinkedHashMap<Integer,Content>();
     private ArrayList<Map<Integer,Content>> handlemaps = new ArrayList<Map<Integer,Content>>();
     private ArrayList<Content> content;
     private int curhandle;    
+    
+    private final Writer writer;
 
     /**
      * <p>
@@ -187,10 +191,10 @@ public class Jdeserialize2 {
     public void read_Classdata(DataInputStream dis, Instance inst) throws IOException {
         ArrayList<ClassDesc> classes = new ArrayList<ClassDesc>();
         inst.classdesc.getHierarchy(classes);
-        Map<ClassDesc, Map<Field, Object>> alldata = new HashMap<ClassDesc, Map<Field, Object>>();
-        Map<ClassDesc, List<Content>> ann = new HashMap<ClassDesc, List<Content>>();
+        Map<ClassDesc, Map<Field, Object>> alldata = new LinkedHashMap<ClassDesc, Map<Field, Object>>();
+        Map<ClassDesc, List<Content>> ann = new LinkedHashMap<ClassDesc, List<Content>>();
         for(ClassDesc cd: classes) {
-            Map<Field, Object> values = new HashMap<Field, Object>();
+            Map<Field, Object> values = new LinkedHashMap<Field, Object>();
             if((cd.descflags & ObjectStreamConstants.SC_SERIALIZABLE) != 0) {
                 if((cd.descflags & ObjectStreamConstants.SC_EXTERNALIZABLE) != 0) {
                     throw new IOException("SC_EXTERNALIZABLE & SC_SERIALIZABLE encountered");
@@ -254,9 +258,18 @@ public class Jdeserialize2 {
                 throw new IOException("can't process type: " + f.toString());
         }
     }
-    public Jdeserialize2(String filename) {
+    public Jdeserialize2(String filename, Writer writer) {
         this.filename = filename;
+        if (writer == null) {
+        	writer = new PrintWriter(System.out, true);
+        }
+        this.writer = writer;
     }
+    
+    public void flushBuffer() throws IOException {
+    	this.writer.flush();
+    }
+    
     private int newHandle() {
         return curhandle++;
     }
@@ -280,7 +293,7 @@ public class Jdeserialize2 {
         }
     }
     
-    public static void dump_Instance(int indentlevel, Instance inst, PrintStream ps) {
+    public void dump_Instance(int indentlevel, Instance inst, Writer writer) throws IOException {
         StringBuffer sb = new StringBuffer();
         sb.append("[instance " + FormatUtil.hex(inst.handle) + ": " + FormatUtil.hex(inst.classdesc.handle) + "/" + inst.classdesc.name);
         if(inst.annotations != null && inst.annotations.size() > 0) {
@@ -316,87 +329,88 @@ public class Jdeserialize2 {
             }
         }
         sb.append("]");
-        ps.println(sb);
+        print(writer, sb.toString(), true);        
     }
 
-    public static void dump_ClassDesc(int indentlevel, ClassDesc cd, PrintStream ps, boolean fixname) throws IOException {
+    public void dump_ClassDesc(int indentlevel, ClassDesc cd, Writer writer, boolean fixname) throws IOException {
         String classname = cd.name;
         if(fixname) {
             classname = TypeUtil.fixClassName(classname);
         }
         if(cd.annotations != null && cd.annotations.size() > 0) {
-            ps.println(indent(indentlevel) + "// annotations: ");
+        	print(writer, indent(indentlevel) + "// annotations: ", true);
+            
             for(Content c: cd.annotations) {
-                ps.print(indent(indentlevel) + "// " + indent(1));
-                ps.println(c.toString());
+                print(writer, indent(indentlevel) + "// " + indent(1), false);
+                print(writer, c.toString(), true);
             }
         }
         if(cd.classtype == ClassDescTypeEnum.NORMALCLASS) {
             if((cd.descflags & ObjectStreamConstants.SC_ENUM) != 0) {
-                ps.print(indent(indentlevel) + "enum " + classname + " {");
+                print(writer, indent(indentlevel) + "enum " + classname + " {", false);
                 boolean shouldindent = true;
                 int len = indent(indentlevel+1).length();
                 for(String econst: cd.enumconstants) {
                     if(shouldindent) {
-                        ps.println("");
-                        ps.print(indent(indentlevel+1));
+                        print(writer, "", true);
+                        print(writer, indent(indentlevel+1), false);
                         shouldindent = false;
                     }
                     len += econst.length();
-                    ps.print(econst + ", ");
+                    print(writer, econst + ", ", false);
                     if(len >= CODEWIDTH) {
                         len = indent(indentlevel+1).length();
                         shouldindent = true;
                     }
                 }
-                ps.println("");
-                ps.println(indent(indentlevel) + "}");
+                print(writer, "", true);
+                print(writer, indent(indentlevel) + "}", true);
                 return;
             } 
-            ps.print(indent(indentlevel));
+            print(writer, indent(indentlevel), false);
             if(cd.isStaticMemberClass()) {
-                ps.print("static ");
+                print(writer, "static ", false);
             }
-            ps.print("class " + (classname.charAt(0) == '[' ? TypeUtil.resolveJavaType(FieldTypeEnum.ARRAY, cd.name, false, fixname) : classname));
+            print(writer, "class " + (classname.charAt(0) == '[' ? TypeUtil.resolveJavaType(FieldTypeEnum.ARRAY, cd.name, false, fixname) : classname), false);
             if(cd.superclass != null) {
-                ps.print(" extends " + cd.superclass.name);
+                print(writer, " extends " + cd.superclass.name, false);
             }
-            ps.print(" implements ");
+            print(writer, " implements ", false);
             if((cd.descflags & ObjectStreamConstants.SC_EXTERNALIZABLE) != 0) {
-                ps.print("java.io.Externalizable");
+                print(writer, "java.io.Externalizable", false);
             } else {
-                ps.print("java.io.Serializable");
+                print(writer, "java.io.Serializable", false);
             }
             if(cd.interfaces != null) {
                 for(String intf: cd.interfaces) {
-                    ps.print(", " + intf);
+                    print(writer, ", " + intf, false);
                 }
             }
-            ps.println(" {");
+            print(writer, " {", true);
             for(Field f: cd.fields) {
                 if(f.isInnerClassReference()) {
                     continue;
                 }
-                ps.print(indent(indentlevel+1) + f.getJavaType());
-                ps.println(" " + f.name + ";");
+                print(writer, indent(indentlevel+1) + f.getJavaType(), false);
+                print(writer, " " + f.name + ";", true);
             }
             for(ClassDesc icd: cd.innerclasses) {
-                dump_ClassDesc(indentlevel+1, icd, ps, fixname);
+                dump_ClassDesc(indentlevel+1, icd, writer, fixname);
             }
-            ps.println(indent(indentlevel)+"}");
+            print(writer, indent(indentlevel)+"}", true);
         } else if(cd.classtype == ClassDescTypeEnum.PROXYCLASS) {
-            ps.print(indent(indentlevel) + "// proxy class " + FormatUtil.hex(cd.handle));
+            print(writer, indent(indentlevel) + "// proxy class " + FormatUtil.hex(cd.handle), false);
             if(cd.superclass != null) {
-                ps.print(" extends " + cd.superclass.name);
+                print(writer, " extends " + cd.superclass.name, false);
             }
-            ps.println(" implements ");
+            print(writer, " implements ", true);
             for(String intf: cd.interfaces) {
-                ps.println(indent(indentlevel) + "//    " + intf + ", ");
+                print(writer, indent(indentlevel) + "//    " + intf + ", ", true);
             }
             if((cd.descflags & ObjectStreamConstants.SC_EXTERNALIZABLE) != 0) {
-                ps.println(indent(indentlevel) + "//    java.io.Externalizable");
+                print(writer, indent(indentlevel) + "//    java.io.Externalizable", true);
             } else {
-                ps.println(indent(indentlevel) + "//    java.io.Serializable");
+                print(writer, indent(indentlevel) + "//    java.io.Serializable", true);
             }
         } else {
             throw new ValidityException("encountered invalid classdesc type!");
@@ -412,7 +426,7 @@ public class Jdeserialize2 {
     public void reset() {
     	LogUtil.debug("reset ordered!");
         if(handles != null && handles.size() > 0) {
-            HashMap<Integer,Content> hm = new HashMap<Integer,Content>();
+            HashMap<Integer,Content> hm = new LinkedHashMap<Integer,Content>();
             hm.putAll(handles);
             handlemaps.add(hm);
         }
@@ -782,7 +796,7 @@ public class Jdeserialize2 {
                     break;
                 }
                 Content c = read_Content(tc, dis, true);
-                System.out.println("read: " + c.toString());
+                print("read: " + c.toString(), true);
                 if(c != null && c.isExceptionObject()) {
                     c = new ExceptionState(c, lis.getRecordedData());
                 }
@@ -810,7 +824,7 @@ public class Jdeserialize2 {
             }
         }
         if(handles != null && handles.size() > 0) {
-            HashMap<Integer,Content> hm = new HashMap<Integer,Content>();
+            HashMap<Integer,Content> hm = new LinkedHashMap<Integer,Content>();
             hm.putAll(handles);
             handlemaps.add(hm);
         }
@@ -833,7 +847,7 @@ public class Jdeserialize2 {
                     pw.println("# an individual blockdata block written to the stream.");
                 }
                 for(Content c: content) {
-                    System.out.println(c.toString());
+                    print(c.toString(), true);
                     if(c instanceof BlockData) {
                         BlockData bd = (BlockData)c;
                         if(mos != null) {
@@ -859,22 +873,22 @@ public class Jdeserialize2 {
             }
         }
         if(!go.hasOption("-nocontent")) {
-            System.out.println("//// BEGIN stream content output");
+            print("//// BEGIN stream content output", true);
             for(Content c: content) {
-                System.out.println(c.toString());
+                print(c.toString(), true);
             }
-            System.out.println("//// END stream content output");
-            System.out.println("");
+            print("//// END stream content output", true);
+            print("", true);
         }
 
         if(!go.hasOption("-noclasses")) {
             boolean showarray = go.hasOption("-showarrays");
             List<String> fpat = go.getArguments("-filter");
-            System.out.println("//// BEGIN class declarations"
+            print("//// BEGIN class declarations"
                     + (showarray? "" : " (excluding array classes)")
                     + ((fpat != null && fpat.size() > 0) 
                         ? " (exclusion filter " + fpat.get(0) + ")"
-                        : ""));
+                        : ""), true);
             for(Content c: handles.values()) {
                 if(c instanceof ClassDesc) {
                     ClassDesc cl = (ClassDesc)c;
@@ -889,23 +903,23 @@ public class Jdeserialize2 {
                     if(fpat != null && fpat.size() > 0 && cl.name.matches(fpat.get(0))) {
                         continue;
                     }
-                    dump_ClassDesc(0, cl, System.out, go.hasOption("-fixnames"));
-                    System.out.println("");
+                    dump_ClassDesc(0, cl, writer, go.hasOption("-fixnames"));
+                    print("", true);
                 }
             }
-            System.out.println("//// END class declarations");
-            System.out.println("");
+            print("//// END class declarations", true);
+            print("", true);
         }
         if(!go.hasOption("-noinstances")) {
-            System.out.println("//// BEGIN instance dump");
+            print("//// BEGIN instance dump", true);
             for(Content c: handles.values()) {
                 if(c instanceof Instance) {
                     Instance i = (Instance)c;
-                    dump_Instance(0, i, System.out);
+                    dump_Instance(0, i, writer);
                 }
             }
-            System.out.println("//// END instance dump");
-            System.out.println("");
+            print("//// END instance dump", true);
+            print("", true);
         }
     }
 
@@ -950,9 +964,9 @@ public class Jdeserialize2 {
      * @throws ValidityException if the found values don't correspond to spec
      */
     public void connectMemberClasses() throws IOException {
-        HashMap<ClassDesc, String> newnames = new HashMap<ClassDesc, String>();
-        HashMap<String, ClassDesc> classes = new HashMap<String, ClassDesc>();
-        HashSet<String> classnames = new HashSet<String>();
+        HashMap<ClassDesc, String> newnames = new LinkedHashMap<ClassDesc, String>();
+        HashMap<String, ClassDesc> classes = new LinkedHashMap<String, ClassDesc>();
+        HashSet<String> classnames = new LinkedHashSet<String>();
         for(Content c: handles.values()) {
             if(!(c instanceof ClassDesc)) {
                 continue;
@@ -1037,10 +1051,28 @@ public class Jdeserialize2 {
                 throw new ValidityException("can't rename class to " + newname + " -- class already exists!");
             }
         }
-    }    
+    }  
+    
+    private void print(Writer writer, String s, boolean newLine) throws IOException {    	
+    	writer.write(s);    	
+    	if (newLine) {
+    		writer.write(FormatUtil.getLineSeperator());
+    	}
+    }
+    
+    private void print(String s, boolean newLine) throws IOException {    	
+    	print(this.writer, s, newLine);
+    }  
+    
+    private static void staticPrint(String s) {
+    	System.out.println(s);
+    }
+    
+    private static void staticPrintErr(String s) {
+    	System.err.println(s);
+    }
 
     public static void main(String[] args) {
-        HashMap<String, Integer> options = new HashMap<String, Integer>();
         GetOpt go = new GetOpt();
         go.addOption("-help", 0, "Show this list.");
         go.addOption("-debug", 0, "Write debug info generated during parsing to stdout.");
@@ -1054,34 +1086,35 @@ public class Jdeserialize2 {
         go.addOption("-blockdata", 1, "Write raw blockdata out to the specified file.");
         go.addOption("-blockdatamanifest", 1, "Write blockdata manifest out to the specified file.");
         try {
-            go.parse(args);
+            go.parse(args);            
         } catch (GetOpt.OptionParseException ope) {
-            System.err.println("argument error: " + ope.getMessage());
-            System.out.println(go.getDescriptionString());
+        	staticPrintErr("argument error: " + ope.getMessage());
+        	staticPrint(go.getDescriptionString());
             System.exit(1);
         }
         if(go.hasOption("-help")) {
-            System.out.println(go.getDescriptionString());
+        	staticPrint(go.getDescriptionString());
             System.exit(1);
         }
         List<String> fargs = go.getOtherArguments();
         if(fargs.size() < 1) {
         	LogUtil.debugerr("args: [options] file1 [file2 .. fileN]");
-            System.err.println("");
-            System.err.println(go.getDescriptionString());
+        	staticPrintErr("");
+        	staticPrintErr(go.getDescriptionString());
             System.exit(1);
         }
         for(String filename: fargs) {
             FileInputStream fis = null;
             try {
                 fis = new FileInputStream(filename);
-                Jdeserialize2 jd = new Jdeserialize2(filename);
+                Jdeserialize2 jd = new Jdeserialize2(filename, null);
                 
                 boolean debugEnabled = go.hasOption("-debug");
                 LogUtil.setDebugEnabled(debugEnabled);                    
                 
                 jd.run(fis, !go.hasOption("-noconnect"));
                 jd.dump(go);
+                jd.flushBuffer();
             } catch(EOFException eoe) {
             	LogUtil.debugerr("EOF error while attempting to decode file " + filename + ": " + eoe.getMessage());
                 eoe.printStackTrace();

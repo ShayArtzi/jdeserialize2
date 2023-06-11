@@ -2,7 +2,7 @@ package com.shayartzi.jdeserialize2.legacy;
 
 import java.io.ObjectStreamConstants;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -153,7 +153,7 @@ public class ClassDesc extends ContentBase {
     public ClassDesc(ClassDescTypeEnum classtype) {
         super(ContentTypeEnum.CLASSDESC);
         this.classtype = classtype;
-        this.enumconstants = new HashSet<String>();
+        this.enumconstants = new LinkedHashSet<String>();
         this.innerclasses = new ArrayList<ClassDesc>();
     }
 

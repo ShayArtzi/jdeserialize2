@@ -1,0 +1,37 @@
+read: com.shayartzi.jdeserialize2.example.obj.FlatObject _h0x7e0003 = r_0x7e0000;  
+//// BEGIN stream content output
+com.shayartzi.jdeserialize2.example.obj.FlatObject _h0x7e0003 = r_0x7e0000;  
+//// END stream content output
+
+//// BEGIN class declarations (excluding array classes)
+class com.shayartzi.jdeserialize2.example.obj.FlatObject implements java.io.Serializable {
+    int intField;
+    java.lang.Integer integerField;
+    java.lang.String strField;
+}
+
+class java.lang.Number implements java.io.Serializable {
+}
+
+class java.lang.Integer extends java.lang.Number implements java.io.Serializable {
+    int value;
+}
+
+//// END class declarations
+
+//// BEGIN instance dump
+[instance 0x7e0003: 0x7e0000/com.shayartzi.jdeserialize2.example.obj.FlatObject
+  field data:
+    0x7e0000/com.shayartzi.jdeserialize2.example.obj.FlatObject:
+        intField: 1
+        integerField: r0x7e0006: java.lang.Integer _h0x7e0006 = r_0x7e0004;  
+        strField: r0x7e0007: [String 0x7e0007: "bar"]
+]
+[instance 0x7e0006: 0x7e0004/java.lang.Integer
+  field data:
+    0x7e0005/java.lang.Number:
+    0x7e0004/java.lang.Integer:
+        value: 2
+]
+//// END instance dump
+

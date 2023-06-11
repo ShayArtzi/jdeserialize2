@@ -2,6 +2,7 @@ package com.shayartzi.jdeserialize2.util;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 
 import com.shayartzi.jdeserialize2.legacy.ValidityException;
 import com.shayartzi.jdeserialize2.legacy.FieldTypeEnum;
@@ -20,7 +21,7 @@ public class TypeUtil {
 	public static HashSet<String> keywordSet;
 	
 	static {
-        keywordSet = new HashSet<String>();
+        keywordSet = new LinkedHashSet<String>();
         for(String kw: keywords) {
             keywordSet.add(kw);
         }

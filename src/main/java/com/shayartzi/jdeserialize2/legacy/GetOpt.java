@@ -1,7 +1,7 @@
 package com.shayartzi.jdeserialize2.legacy;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -61,8 +61,8 @@ public class GetOpt {
      * Constructor.  
      */
     public GetOpt() {
-        this.options = new HashMap<String, Integer>();
-        this.descriptions = new HashMap<String, String>();
+        this.options = new LinkedHashMap<String, Integer>();
+        this.descriptions = new LinkedHashMap<String, String>();
     }
 
     /**
@@ -106,7 +106,7 @@ public class GetOpt {
      */
     public void parse(String[] args) throws OptionParseException {
         this.otherargs = new ArrayList<String>();
-        this.optvals = new HashMap<String, List<String>>();
+        this.optvals = new LinkedHashMap<String, List<String>>();
 
         for(int i = 0; i < args.length; i++) {
             if(optvals != null) {

@@ -1,6 +1,6 @@
 package com.shayartzi.jdeserialize2.legacy;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -28,7 +28,7 @@ public class Instance extends ContentBase {
      */
     public Instance() {
         super(ContentTypeEnum.INSTANCE);
-        this.fielddata = new HashMap<ClassDesc, Map<Field, Object>>();
+        this.fielddata = new LinkedHashMap<ClassDesc, Map<Field, Object>>();
     }
     public String toString() {
         StringBuffer sb = new StringBuffer();
