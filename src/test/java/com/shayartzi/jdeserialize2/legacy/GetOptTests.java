@@ -12,9 +12,12 @@ import org.junit.jupiter.api.Test;
 import com.shayartzi.jdeserialize2.legacy.GetOpt.OptionParseException;
 
 class GetOptTests {
+	
+	private String lineSep;
 
 	@BeforeEach
 	void setUp() throws Exception {
+		lineSep = System.getProperty("line.separator");
 	}
 
 	@Test
@@ -31,10 +34,10 @@ class GetOptTests {
         
         // Validate options
         String expectedOptions = 
-        		"Options:\r\n" +
-        		"    -optone arg1: one-arg constructor\r\n" +
-        		"    -opttwo arg1 arg2: two-arg constructor\r\n" +
-        		"    -optzero: zero-arg constructor\r\n";
+        		"Options:" + lineSep +
+        		"    -optone arg1: one-arg constructor" + lineSep +
+        		"    -opttwo arg1 arg2: two-arg constructor" + lineSep +
+        		"    -optzero: zero-arg constructor" + lineSep;
         
         assertEquals(expectedOptions, go.getDescriptionString());
         
